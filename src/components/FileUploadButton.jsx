@@ -1,51 +1,30 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, forwardRef, useImperativeHandle } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { extractDataFromUpload } from '../utils/dataQuality'
-import { parseUploadedValue } from '../data/knowledgeData'
+import { processUploadedFile } from '../utils/fileUpload'
 
-function parseFileContent(text, filename) {
-  const ext = filename.split('.').pop()?.toLowerCase()
-  if (ext === 'json') {
-    return JSON.parse(text)
-  }
-  if (ext === 'csv') {
-    const lines = text.trim().split('\n')
-    const headers = lines[0].split(',').map((h) => h.trim())
-    const values = lines[1]?.split(',').map((v) => v.trim()) ?? []
-    const obj = {}
-    headers.forEach((h, i) => {
-      obj[h] = values[i]
-    })
-    return obj
-  }
-  throw new Error('Unsupported format — use JSON or CSV')
-}
-
-export default function FileUploadButton({ onUploadComplete, disabled }) {
+const FileUploadButton = forwardRef(function FileUploadButton(
+  { onUploadComplete, disabled, iconOnly = false, label = 'Upload data', className = '' },
+  ref,
+) {
   const inputRef = useRef(null)
   const [step, setStep] = useState(null)
+
+  useImperativeHandle(ref, () => ({
+    open: () => inputRef.current?.click(),
+  }))
 
   const handleFile = async (file) => {
     setStep('reading')
     await new Promise((r) => setTimeout(r, 800))
 
     try {
-      const text = await file.text()
-      const parsed = parseFileContent(text, file.name)
-      const extracted = extractDataFromUpload(parsed)
-
       setStep('quality')
       await new Promise((r) => setTimeout(r, 600))
-
-      const normalized = {}
-      Object.entries(extracted).forEach(([key, raw]) => {
-        normalized[key] = parseUploadedValue(key, raw)
-      })
 
       setStep('populating')
       await new Promise((r) => setTimeout(r, 400))
 
-      onUploadComplete(normalized, file.name)
+      await processUploadedFile(file, onUploadComplete)
       setStep(null)
     } catch (err) {
       setStep(null)
@@ -70,9 +49,25 @@ export default function FileUploadButton({ onUploadComplete, disabled }) {
         type="button"
         disabled={disabled || !!step}
         onClick={() => inputRef.current?.click()}
-        className="rounded-lg border border-white/20 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+        className={`flex items-center justify-center rounded-lg border border-white/20 font-semibold text-white transition hover:bg-white/10 active:scale-95 disabled:opacity-50 ${
+          iconOnly
+            ? 'min-h-[44px] min-w-[44px] p-2'
+            : 'min-h-[36px] px-3 py-2 text-[11px] sm:px-4 sm:text-xs'
+        } ${className}`}
+        aria-label={iconOnly ? label : undefined}
+        title={iconOnly ? label : undefined}
       >
-        Upload data
+        {iconOnly ? (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+            />
+          </svg>
+        ) : (
+          label
+        )}
       </button>
 
       <AnimatePresence>
@@ -81,7 +76,7 @@ export default function FileUploadButton({ onUploadComplete, disabled }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-navy/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-navy/40 backdrop-blur-sm"
           >
             <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
               <h3 className="text-sm font-semibold text-navy">Processing upload</h3>
@@ -123,4 +118,6 @@ export default function FileUploadButton({ onUploadComplete, disabled }) {
       </AnimatePresence>
     </>
   )
-}
+})
+
+export default FileUploadButton

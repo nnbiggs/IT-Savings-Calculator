@@ -1,9 +1,16 @@
-import { motion } from 'framer-motion'
 import SessionProgress from './SessionProgress'
 import OpportunityCard from './OpportunityCard'
 import ScenarioPanel from './ScenarioPanel'
 import DataQualityPanel from './DataQualityPanel'
-import { formatSavingRange } from '../lib/parseInsights'
+import SavingsTracker from './SavingsTracker'
+import { useIsMobile } from '../hooks/useBreakpoint'
+
+const EXPLORATION_QUESTIONS = [
+  'What is our biggest software spend risk?',
+  'How much could SAM save us annually?',
+  'What does full BU coverage change?',
+  'Which phase delivers fastest ROI?',
+]
 
 export default function InsightsPanel({
   opportunities,
@@ -22,98 +29,134 @@ export default function InsightsPanel({
   onAcceptRecommendation,
   onSaveFieldEdit,
   onCancelEdit,
+  section = 'all',
+  savingsTrackerRef,
+  lazyScenarios = false,
 }) {
-  return (
-    <aside className="flex w-full flex-col border-l border-light-blue/50 bg-white lg:w-[400px] xl:w-[480px]">
-      <div className="border-b border-light-blue/50 px-5 py-4">
-        <h2 className="text-sm font-semibold text-navy">Context Panel</h2>
-        <p className="text-[11px] text-body/50">
-          Data quality, scenarios, and live insights
-        </p>
-      </div>
+  const isMobile = useIsMobile()
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-        <DataQualityPanel
-          qualityReport={qualityReport}
-          recommendations={cleansingRecommendations}
-          cleansingLoading={cleansingLoading}
-          editingField={editingField}
-          onSelectField={onSelectField}
-          onAcceptRecommendation={onAcceptRecommendation}
-          onSaveFieldEdit={onSaveFieldEdit}
-          onCancelEdit={onCancelEdit}
-        />
+  const showQuality = section === 'all' || section === 'quality'
+  const showScenarios = section === 'all' || section === 'scenarios'
+  const showAnalysisContent = section === 'all' || section === 'analysis'
+  const showProgress = section === 'all'
+  const isMobileAnalysis = isMobile && section === 'analysis'
 
-        <ScenarioPanel
-          compareIds={compareScenarioIds}
-          highlightedId={highlightedScenarioId}
-          onToggleCompare={onToggleCompareScenario}
-        />
-
-        <div className="border-t border-light-blue/40 pt-5">
-          <SessionProgress currentPhase={currentPhase} />
-        </div>
-
-        {(totalSavingsLow > 0 || totalSavingsHigh > 0) && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="rounded-xl bg-navy p-4 text-white"
+  const factsSection = facts.length > 0 && showAnalysisContent && (
+    <div>
+      <h3 className="mb-3 text-lg font-semibold text-navy sm:text-xl">
+        What We Know
+      </h3>
+      <div className={isMobileAnalysis ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>
+        {facts.map((fact) => (
+          <div
+            key={fact.label}
+            className={`rounded-lg bg-light-grey px-3 py-2 ${
+              isMobileAnalysis
+                ? 'flex min-h-[44px] flex-col justify-center'
+                : 'flex items-center justify-between'
+            }`}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-light-blue/70">
-              Identified Savings Range
-            </p>
-            <p className="mt-1 text-2xl font-bold text-white">
-              {formatSavingRange(totalSavingsLow, totalSavingsHigh)}
-            </p>
-            {qualityReport.overallScore < 90 && (
-              <p className="mt-1 text-[10px] text-amber/90">
-                Caveat: {qualityReport.qualityLevel} data ({qualityReport.overallScore}%)
-              </p>
-            )}
-            <p className="mt-1 text-[11px] text-light-blue/60">
-              {opportunities.length} opportunit{opportunities.length === 1 ? 'y' : 'ies'} identified
-            </p>
-          </motion.div>
+            <span className="text-xs font-medium text-body/60 sm:text-sm">{fact.label}</span>
+            <span className="text-xs font-semibold text-navy sm:text-sm">{fact.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  const savingsSection = showAnalysisContent && (
+    <div ref={savingsTrackerRef}>
+      <SavingsTracker
+        totalSavingsLow={totalSavingsLow}
+        totalSavingsHigh={totalSavingsHigh}
+        opportunities={opportunities}
+        qualityReport={qualityReport}
+      />
+    </div>
+  )
+
+  const opportunitiesSection = showAnalysisContent && (
+    <div>
+      <h3 className="mb-3 text-lg font-semibold text-navy sm:text-xl">
+        {isMobileAnalysis ? 'Questions to Explore' : 'Savings Opportunities'}
+      </h3>
+      {isMobileAnalysis ? (
+        <ul className="space-y-2">
+          {EXPLORATION_QUESTIONS.map((q) => (
+            <li
+              key={q}
+              className="rounded-lg border border-light-blue/40 bg-light-grey/50 px-3 py-3 text-sm text-body/70"
+            >
+              {q}
+            </li>
+          ))}
+        </ul>
+      ) : opportunities.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-light-blue bg-light-grey/50 px-4 py-6 text-center">
+          <p className="text-xs font-medium text-body/50 sm:text-sm">
+            Opportunities appear as the consultant identifies them
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {opportunities.map((opp, i) => (
+            <OpportunityCard key={opp.title} opportunity={opp} index={i} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <aside className="flex min-h-0 min-w-0 w-full flex-col overflow-hidden bg-white lg:w-[35%] lg:border-r lg:border-light-blue/50">
+      {section === 'all' && (
+        <div className="hidden shrink-0 border-b border-light-blue/50 px-5 py-4 lg:block">
+          <h2 className="text-xl font-semibold text-navy">Context Panel</h2>
+          <p className="text-sm text-body/50">
+            Data quality, scenarios, and live insights
+          </p>
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-5 sm:py-5">
+        {/* Mobile analysis: savings first */}
+        {isMobileAnalysis && savingsSection}
+
+        {showQuality && (
+          <DataQualityPanel
+            qualityReport={qualityReport}
+            recommendations={cleansingRecommendations}
+            cleansingLoading={cleansingLoading}
+            editingField={editingField}
+            onSelectField={onSelectField}
+            onAcceptRecommendation={onAcceptRecommendation}
+            onSaveFieldEdit={onSaveFieldEdit}
+            onCancelEdit={onCancelEdit}
+            mobileCards={section === 'quality' || isMobileAnalysis}
+          />
         )}
 
-        {facts.length > 0 && (
-          <div>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-body/50">
-              Key Facts
-            </h3>
-            <div className="space-y-2">
-              {facts.map((fact) => (
-                <div
-                  key={fact.label}
-                  className="flex items-center justify-between rounded-lg bg-light-grey px-3 py-2"
-                >
-                  <span className="text-xs font-medium text-body/60">{fact.label}</span>
-                  <span className="text-xs font-semibold text-navy">{fact.value}</span>
-                </div>
-              ))}
-            </div>
+        {/* Desktop / tablet: facts before savings */}
+        {!isMobileAnalysis && factsSection}
+        {!isMobileAnalysis && savingsSection}
+
+        {showScenarios && (
+          <ScenarioPanel
+            compareIds={compareScenarioIds}
+            highlightedId={highlightedScenarioId}
+            onToggleCompare={onToggleCompareScenario}
+            lazy={lazyScenarios}
+          />
+        )}
+
+        {showProgress && (
+          <div className="border-t border-light-blue/40 pt-5">
+            <SessionProgress currentPhase={currentPhase} />
           </div>
         )}
 
-        <div>
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-body/50">
-            Savings Opportunities
-          </h3>
-          {opportunities.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-light-blue bg-light-grey/50 px-4 py-6 text-center">
-              <p className="text-xs font-medium text-body/50">
-                Opportunities appear as the consultant identifies them
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {opportunities.map((opp, i) => (
-                <OpportunityCard key={opp.title} opportunity={opp} index={i} />
-              ))}
-            </div>
-          )}
-        </div>
+        {isMobileAnalysis && factsSection}
+        {opportunitiesSection}
       </div>
     </aside>
   )

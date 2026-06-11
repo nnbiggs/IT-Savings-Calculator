@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
 import { stripStructuredBlocks } from '../lib/parseInsights'
+import { useReducedMotion } from '../hooks/useReducedMotion'
+import { useIsMobile } from '../hooks/useBreakpoint'
 
 function renderInline(text) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
@@ -58,26 +60,41 @@ export default function MessageBubble({ message }) {
   const displayText = isUser
     ? message.content
     : stripStructuredBlocks(message.content)
+  const reducedMotion = useReducedMotion()
+  const isMobile = useIsMobile()
 
   if (!displayText) return null
 
+  const Wrapper = reducedMotion ? 'div' : motion.div
+  const motionProps = reducedMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: isMobile ? 0 : 12 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: isMobile ? 0.15 : 0.3, ease: 'easeOut' },
+      }
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
+    <Wrapper
+      {...motionProps}
       className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
     >
       <div
-        className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+        className={`rounded-2xl px-4 py-3 leading-relaxed ${
+          isMobile ? 'max-w-[88%] text-sm' : 'max-w-[80%] text-sm md:max-w-[80%] lg:max-w-[75%] lg:text-base'
+        } ${
           isUser
-            ? 'rounded-br-md bg-teal text-white'
-            : 'rounded-bl-md border border-light-blue/60 bg-white text-body shadow-sm'
+            ? 'rounded-br-md bg-navy text-white'
+            : 'rounded-bl-md border-l-4 border-l-teal border border-light-blue/60 bg-white text-body shadow-sm'
         }`}
       >
         {!isUser && (
           <div className="mb-1.5 flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-navy text-[9px] font-bold text-white">
+            <div
+              className={`flex items-center justify-center rounded-full bg-navy font-bold text-white ${
+                isMobile ? 'h-7 w-7 text-[8px]' : 'h-5 w-5 text-[9px]'
+              }`}
+            >
               PwC
             </div>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-teal">
@@ -89,6 +106,6 @@ export default function MessageBubble({ message }) {
           {isUser ? displayText : renderMarkdown(displayText)}
         </div>
       </div>
-    </motion.div>
+    </Wrapper>
   )
 }

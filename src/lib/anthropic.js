@@ -7,7 +7,6 @@ export async function sendMessage(messages, systemPrompt) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
       model: MODEL,

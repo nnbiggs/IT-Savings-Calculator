@@ -1,6 +1,4 @@
-import { useState } from 'react'
-
-export default function ChatInput({ value, onChange, onSubmit, isLoading }) {
+export default function ChatInput({ value, onChange, onSubmit, isLoading, compact = false }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -9,23 +7,31 @@ export default function ChatInput({ value, onChange, onSubmit, isLoading }) {
   }
 
   return (
-    <div className="shrink-0 border-t border-light-blue/50 bg-white px-6 py-4">
-      <form onSubmit={onSubmit} className="flex items-end gap-3">
-        <div className="relative flex-1">
+    <div
+      className={`shrink-0 border-t border-light-blue/50 bg-white ${
+        compact ? 'px-3 py-3' : 'px-4 py-4 sm:px-6'
+      }`}
+    >
+      <form onSubmit={onSubmit} className="flex items-end gap-2 sm:gap-3">
+        <div className="relative min-w-0 flex-1">
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Share your IT context or answer the consultant's question..."
-            rows={2}
+            rows={compact ? 1 : 2}
             disabled={isLoading}
-            className="w-full resize-none rounded-xl border border-light-blue bg-light-grey/50 px-4 py-3 text-sm text-body placeholder:text-body/40 focus:border-teal focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal/20 disabled:opacity-60"
+            className={`w-full resize-none rounded-xl border border-light-blue bg-light-grey/50 px-3 py-2.5 text-body placeholder:text-body/40 focus:border-teal focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal/20 disabled:opacity-60 sm:px-4 sm:py-3 ${
+              compact ? 'text-sm' : 'text-sm sm:text-base'
+            }`}
           />
         </div>
         <button
           type="submit"
           disabled={!value.trim() || isLoading}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal text-white transition hover:bg-teal/90 disabled:cursor-not-allowed disabled:opacity-40"
+          className={`flex shrink-0 items-center justify-center rounded-xl bg-teal text-white transition hover:bg-teal/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
+            compact ? 'h-11 w-11' : 'h-11 w-11 sm:h-11 sm:w-11'
+          }`}
           aria-label="Send message"
         >
           <svg
@@ -43,9 +49,11 @@ export default function ChatInput({ value, onChange, onSubmit, isLoading }) {
           </svg>
         </button>
       </form>
-      <p className="mt-2 text-[11px] text-body/40">
-        Press Enter to send · Shift+Enter for new line
-      </p>
+      {!compact && (
+        <p className="mt-2 hidden text-[11px] text-body/40 sm:block">
+          Press Enter to send · Shift+Enter for new line
+        </p>
+      )}
     </div>
   )
 }

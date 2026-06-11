@@ -25,7 +25,8 @@ export async function sendMessage(messages, systemPrompt, { forceDemo = false } 
     const isMissingKey =
       error.message?.includes('ANTHROPIC_API_KEY') ||
       error.message?.includes('not set') ||
-      error.message?.includes('503')
+      error.message?.includes('503') ||
+      error.message?.includes('404')
 
     if (isMissingKey) {
       demoModeActive = true
